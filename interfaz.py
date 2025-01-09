@@ -9,6 +9,7 @@ from TelefonicaMovil import procesar_Telefonica_Movil
 from TelecomFija import procesar_Telecom_Fija
 from TelecomMovil import procesar_Telecom_Movil
 from TelecomDatos import procesar_Telecom_Datos
+from TelecomOtro import procesar_Telecom_Otro
 
 import os
 import PyPDF2
@@ -88,7 +89,18 @@ def cargar_Telecom_Datos(barra_progreso):
   if not ruta_excel:
         print("No se seleccionó ningún archivo Excel para guardar.")
         return
-  procesar_Telecom_Datos(ruta_carpeta, barra_progreso,ruta_excel)  
+  procesar_Telecom_Datos(ruta_carpeta, barra_progreso,ruta_excel)
+
+def cargar_Telecom_Otro(barra_progreso):
+  ruta_carpeta =filedialog.askdirectory()
+  if not ruta_carpeta:
+        print("No se seleccionó ninguna carpeta.")
+        return
+  ruta_excel = elegir_destino_excel()
+  if not ruta_excel:
+        print("No se seleccionó ningún archivo Excel para guardar.")
+        return
+  procesar_Telecom_Otro(ruta_carpeta, barra_progreso,ruta_excel)
   
 def iniciar_interfaz():
  root = tk.Tk()
@@ -134,15 +146,19 @@ def iniciar_interfaz():
 
  boton_origen4 = Button(root, text="Fijo", width=5, height=1,
                        font=("Colibri", 16), command=lambda: cargar_Telecom_Fija(barra_progreso), relief="raised", bd=2, bg="#B7D2E9", fg="#000000")
- boton_origen4.place(x=220, y=230)
+ boton_origen4.place(x=165, y=230)
 
  boton_origen5 = Button(root, text="Datos", width=5, height=1,
                        font=("Colibri", 16), command=lambda: cargar_Telecom_Datos(barra_progreso), relief="raised", bd=2, bg="#B7D2E9", fg="#000000")
- boton_origen5.place(x=70, y=230)
+ boton_origen5.place(x=60, y=230)
 
  boton_origen6 = Button(root, text="Móvil", width=5, height=1,
                        font=("Colibri", 16), command=lambda: cargar_Telecom_Movil(barra_progreso), relief="raised", bd=2, bg="#B7D2E9", fg="#000000")
- boton_origen6.place(x=360, y=230)
+ boton_origen6.place(x=265, y=230)
+
+ boton_origen10 = Button(root, text="Otro", width=5, height=1,
+                       font=("Colibri", 16), command=lambda: cargar_Telecom_Otro(barra_progreso), relief="raised", bd=2, bg="#B7D2E9", fg="#000000")
+ boton_origen10.place(x=365, y=230)
 
  titulo3 = tk.Label(root,text="CLARO", font=("Colibri", 20,"underline"), bg="#B7D2E9", fg="#000000")
  titulo3.place(x=200,y=285)
