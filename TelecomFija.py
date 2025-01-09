@@ -3,6 +3,7 @@ import os #Trabajar con archivos y carpetas
 import pdfplumber #Trabajar con PDF
 from tkinter import messagebox #interfaz grafica
 from openpyxl import Workbook, load_workbook #Para trabajar con Excel
+from openpyxl.styles import PatternFill, Font
 import os
 import PyPDF2
 from PyPDF2 import PdfReader
@@ -16,7 +17,7 @@ def pdf_a_texto(ruta_completa):
             texto_completo += pagina.extract_text()
     return texto_completo
 
-def getCargosPeriodoFija(texto):
+def getPeriodoFacturadoFija(texto):
     match = re.search(r"PERIODO FACTURADO\s*(\d{2}/\d{2}/\d{4})\s*al\s*(\d{2}/\d{2}/\d{4})", texto)
     if match:
         return f"{match.group(1)} al {match.group(2)}"
@@ -29,13 +30,13 @@ def getNroCuentaFija(texto):
     return None
 
 def getFechaVencimientoFija(texto):
-    match = re.search(r"Vencimiento:\s*(\d{1,2}/\d{1,2}/\d{4})", texto) 
+    match = re.search(r"VENCIMIENTO\s*(\d{2}/\d{2}/\d{4})", texto) 
     if match:
         return match.group(1)  
     return None
 
 def getFechaEmisionFija(texto):
-    match = re.search(r"Fecha de emisión:\s*(\d{1,2}/\d{1,2}/\d{4})", texto) 
+    match = re.search(r"Fecha deEmisión\s*(\d{2}/\d{2}/\d{4})", texto) 
     if match:
         return match.group(1)  
     return None 
@@ -54,7 +55,7 @@ def getNroClienteFija(texto):
     return None
 
 def getNroFacturaFija(texto):
-    match = re.search(r"Factura\s+(\d{4}-\d{8})", texto)
+    match = re.search(r"Factura\s+N°\s+([A-Z]?\d{5}-\d{8})", texto)
     if match:
         return match.group(1) 
     return None
@@ -74,9 +75,16 @@ def getMontoTotalDatos(texto):
         return match.group(1) 
     return None
 
+def getCargoDelMes(texto):
+    """Busca el monto en todo el texto basado en su formato."""
+    match = re.search(r"CARGOS\s+DEL\s+MES\s+\$\s*([\d.]+,\d{2})", texto)
+    if match:
+        return match.group(1)
+    return None
+
 def getTipoServicioDatos(texto):
   
-    palabras_clave = ["VPN-IP", "INTERNET SIMETRICO", "INTERNET FULL", "INTERNET SEGURO"]
+    palabras_clave = ["VPN-IP", "INTERNET SIMETRICO", "INTERNET FULL", "INTERNET SEGURO", "ABONOS"]
 
     servicios_encontrados = [servicio.strip('-') for servicio in palabras_clave if servicio in texto]
 
@@ -93,9 +101,16 @@ def guardar_datos_excel(datos, archivo_excel):
             wb = Workbook()
             ws = wb.active
             ws.title = "Facturas"
-            encabezados = ["ORDEN","EMPRESA","CLIENTE", "Nº CUENTA", "Nº FACTURA", "SERVICIO", "FECHA EMISION","VENCIMIENTO","CARGOS PERIODO","TOTAL A PAGAR","REFERENCIA PAGO"]
+            encabezados = ["ORDEN","EMPRESA", "Nº FACTURA", "SERVICIO", "FECHA EMISION","VENCIMIENTO","PERIODO FACTURADO","CARGOS DEL MES", "TOTAL A PAGAR","REFERENCIA PAGO"]
             ws.append(encabezados)
-            siguiente_orden = 1 
+            siguiente_orden = 1
+            fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")  # Fondo amarillo
+            font = Font(bold=True, color="000000")
+            for celda in ws[1]:
+                celda.fill = fill
+                celda.font = font
+            
+            siguiente_orden = 1
         else:
             wb = load_workbook(archivo_excel)
             ws = wb.active
@@ -104,13 +119,14 @@ def guardar_datos_excel(datos, archivo_excel):
         fila_datos = [
         siguiente_orden,
         datos.get("empresa"),
-        datos.get("numero_cliente"),
-        datos.get("numero_cuenta"),
+        # datos.get("numero_cliente"),
+        # datos.get("numero_cuenta"),
         datos.get("numero_factura"),
         datos.get("servicio"),
         datos.get("fecha_emision"),
         datos.get("fecha_vto"),
-        datos.get("cargos_periodo"),
+        datos.get("periodo_facturado"),
+        datos.get("cargos_mes"),
         datos.get("monto_total"),
         datos.get("referencia_pago"),
         ]
@@ -126,23 +142,25 @@ def extraer_info_factura_fija(texto):
     datos = {
         "orden": None,
         "empresa": "None",
-        "numero_cliente": None,
-        "numero_cuenta": None,
+        # "numero_cliente": None,
+        # "numero_cuenta": None,
         "numero_factura": None,
         "servicio": None,
         "fecha_emision": None,
         "fecha_vto": None,
-        "cargos_periodo": None,
+        "periodo_facturado": None,
+        "cargos_mes": None,
         "monto_total": None,
         "referencia_pago": None,
     }
     
     datos["empresa"]= "TELECOM FIJA"
-    datos["numero_cliente"] = getNroClienteFija(texto)
+    # datos["numero_cliente"] = getNroClienteFija(texto)
     datos["numero_factura"] = getNroFacturaFija(texto)
-    datos["numero_cuenta"] =getNroCuentaFija(texto)
+    # datos["numero_cuenta"] =getNroCuentaFija(texto)
     datos["servicio"] = getTipoServicioFija(texto)
-    datos["cargos_periodo"] = getCargosPeriodoFija(texto)
+    datos["cargos_mes"] = getCargoDelMes(texto)
+    datos["periodo_facturado"] = getPeriodoFacturadoFija(texto)
     datos["fecha_emision"] = getFechaEmisionFija(texto) 
     datos["fecha_vto"] = getFechaVencimientoFija(texto) 
     datos["monto_total"] = getMontoTotalDatos(texto)
@@ -159,7 +177,7 @@ def procesar_Telecom_Fija(pdf_path, barra_progreso, archivo_excel):
          ruta_archivo = os.path.join(pdf_path, archivo)
 
          texto_extraido = pdf_a_texto(ruta_archivo)
-         print(texto_extraido)
+        #  print(texto_extraido)
          datos_factura = extraer_info_factura_fija(texto_extraido)
          guardar_datos_excel(datos_factura, archivo_excel)
         
@@ -169,8 +187,3 @@ def procesar_Telecom_Fija(pdf_path, barra_progreso, archivo_excel):
         messagebox.showinfo("Proceso finalizado", f"Se han procesado: {total_facturas} facturas.")
     except Exception as e:
         messagebox.showerror("ERROR", "No se pudo completar el proceso " + {e})
-
-
-
-
-
